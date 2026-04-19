@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnostic Artisan</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh;padding:1.5rem 1rem}
+  .container{max-width:700px;margin:0 auto}
+  h1{font-size:20px;font-weight:600;margin-bottom:4px}
+  .subtitle{font-size:13px;color:#888;margin-bottom:1.25rem}
+  .nav1{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .nav1 button{font-size:13px;padding:7px 18px;border-radius:20px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;transition:all 0.15s;font-weight:600}
+  .nav1 button:hover{border-color:#999;color:#1a1a1a}
+  .nav1 button.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+  .nav2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;padding-left:4px}
+  .nav2 button{font-size:12px;padding:5px 14px;border-radius:20px;border:1px solid #e0e0e0;background:#f5f5f3;color:#666;cursor:pointer;transition:all 0.15s;font-weight:500}
+  .nav2 button:hover{border-color:#bbb;color:#1a1a1a;background:#fff}
+  .nav2 button.active{background:#444;color:#fff;border-color:#444}
+  .progress{display:flex;gap:5px;margin-bottom:1.25rem;align-items:center}
+  .progress-dot{width:8px;height:8px;border-radius:50%;background:#ddd;transition:background 0.2s}
+  .progress-dot.done{background:#2d9e5c}
+  .progress-dot.current{background:#888}
+  .progress-label{font-size:12px;color:#aaa;margin-left:8px}
+  .step{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1.25rem;margin-bottom:10px;transition:border-color 0.2s,background 0.2s}
+  .step.answered{background:#fafaf8;border-color:#d8d8d4}
+  .step-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#aaa}
+  .step-answered-tag{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#2d9e5c;background:#f0faf4;border:1px solid #86d9a0;border-radius:20px;padding:2px 8px}
+  .check-icon{width:12px;height:12px;border-radius:50%;background:#2d9e5c;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .check-icon svg{width:7px;height:7px}
+  .step-q{font-size:15px;font-weight:500;color:#1a1a1a;margin-bottom:14px;line-height:1.4}
+  .step.answered .step-q{font-size:14px;color:#777}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opts button{font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid #e0e0e0;background:#f9f9f7;color:#333;cursor:pointer;transition:all 0.15s;line-height:1.3;display:flex;align-items:center;gap:7px}
+  .opts button:hover{border-color:#bbb;background:#fff}
+  .opts button.selected{border-color:#1a1a1a;background:#1a1a1a;color:#fff}
+  .opts button.not-selected{opacity:0.35}
+  .opts button.not-selected:hover{opacity:0.6;border-color:#bbb;background:#fff}
+  .btn-check{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.5);display:none;align-items:center;justify-content:center;flex-shrink:0}
+  .opts button.selected .btn-check{display:flex}
+  .btn-check svg{width:8px;height:8px}
+  .auto-hint{background:#f0faf4;border:1px solid #86d9a0;border-radius:10px;padding:10px 14px;margin-top:8px;font-size:13px;color:#145a2a;line-height:1.5}
+  .result{border-radius:12px;padding:1.25rem;margin-top:6px}
+  .result.rouge{background:#fff0f0;border:1.5px solid #f5a0a0}
+  .result.orange{background:#fff7ed;border:1.5px solid #fbc97a}
+  .result.jaune{background:#fffbea;border:1.5px solid #f5d87a}
+  .result.vert{background:#f0faf4;border:1.5px solid #86d9a0}
+  .result.noir{background:#f4f4f2;border:1.5px solid #ccc}
+  .result-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .result-badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:3px 10px;border-radius:20px}
+  .rouge .result-badge{background:#fcd4d4;color:#8b1a1a}
+  .orange .result-badge{background:#fde4b8;color:#7a3800}
+  .jaune .result-badge{background:#fdeea0;color:#6b4c00}
+  .vert .result-badge{background:#b8f0cc;color:#145a2a}
+  .noir .result-badge{background:#e0e0dc;color:#444}
+  .result-title{font-size:15px;font-weight:600}
+  .rouge .result-title{color:#7a1010}
+  .orange .result-title{color:#6b3200}
+  .jaune .result-title{color:#5a4000}
+  .vert .result-title{color:#0e4a20}
+  .noir .result-title{color:#333}
+  .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .rmeta{background:rgba(255,255,255,0.7);border-radius:8px;padding:8px 10px}
+  .rmeta-label{font-size:11px;font-weight:500;margin-bottom:3px;opacity:0.7}
+  .rouge .rmeta-label{color:#8b1a1a}
+  .orange .rmeta-label{color:#7a3800}
+  .jaune .rmeta-label{color:#6b4c00}
+  .vert .rmeta-label{color:#145a2a}
+  .noir .rmeta-label{color:#555}
+  .rmeta-val{font-size:13px;font-weight:600}
+  .rouge .rmeta-val{color:#5a0a0a}
+  .orange .rmeta-val{color:#4a2200}
+  .jaune .rmeta-val{color:#3a2e00}
+  .vert .rmeta-val{color:#083318}
+  .noir .rmeta-val{color:#222}
+  .result-msg{font-size:13px;line-height:1.6;padding:10px 12px;background:rgba(255,255,255,0.6);border-radius:8px;margin-bottom:10px}
+  .rouge .result-msg{color:#6a0a0a}
+  .orange .result-msg{color:#4a2200}
+  .jaune .result-msg{color:#3a2e00}
+  .vert .result-msg{color:#083318}
+  .noir .result-msg{color:#333}
+  /* VIGILANCE BLOCK */
+  .vigilance{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;border-left:3px solid}
+  .rouge .vigilance{background:rgba(255,255,255,0.5);border-left-color:#e05050;color:#7a1010}
+  .orange .vigilance{background:rgba(255,255,255,0.5);border-left-color:#d97706;color:#6b3200}
+  .jaune .vigilance{background:rgba(255,255,255,0.5);border-left-color:#c4a000;color:#5a4000}
+  .vert .vigilance{background:rgba(255,255,255,0.5);border-left-color:#2d9e5c;color:#0e4a20}
+  .noir .vigilance{background:rgba(255,255,255,0.5);border-left-color:#888;color:#444}
+  .vigilance-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+  .action-pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;border:none;cursor:default}
+  .pill-urgent{background:#e53e3e;color:#fff}
+  .pill-validation{background:#d97706;color:#fff}
+  .pill-auto{background:#2d9e5c;color:#fff}
+  .bilan{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1.25rem;margin-top:12px}
+  .bilan-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .bilan-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#aaa}
+  .client-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .field-wrap{display:flex;flex-direction:column;gap:4px}
+  .field-wrap label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#aaa}
+  .field-wrap input{font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid #e0e0e0;background:#f9f9f7;color:#333;outline:none;transition:border-color 0.15s}
+  .field-wrap input:focus{border-color:#888;background:#fff}
+  .field-wrap input::placeholder{color:#bbb}
+  .bilan-body{background:#f5f5f3;border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.8;color:#333;white-space:pre-wrap;font-family:monospace;border:1px solid #e8e8e8}
+  .copy-btn{font-size:13px;font-weight:500;padding:7px 16px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;white-space:nowrap}
+  .copy-btn:hover{background:#f5f5f3;border-color:#bbb}
+  .copy-btn.copied{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+  .copy-btn svg{width:14px;height:14px;flex-shrink:0}
+  .reset-btn{margin-top:1rem;font-size:13px;padding:8px 18px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;font-weight:500}
+  .reset-btn:hover{background:#f5f5f3;border-color:#bbb}
+  .footer{margin-top:2rem;font-size:12px;color:#bbb;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Diagnostic rapide</h1>
+  <p class="subtitle">Outil de qualification — répondre pendant l'appel client</p>
+  <div class="nav1">
+    <button class="active" onclick="switchCat('plomberie')">Plomberie</button>
+    <button onclick="switchCat('cvc')">CVC</button>
+    <button onclick="switchCat('autre')">Autre</button>
+  </div>
+  <div class="nav2" id="nav2"></div>
+  <div id="domainWrap"></div>
+  <div class="footer">Diagnostic Artisan — usage hors ligne</div>
+</div>
+<script>
+const CHECK_WHITE='<svg viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK_GREEN='<svg viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#2d9e5c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const COPY_ICON='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11H2a1 1 0 01-1-1V2a1 1 0 011-1h8a1 1 0 011 1v1"/></svg>';
+const CHECK_ICON='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const categories={
+  plomberie:{label:'Plomberie',subs:['fuite','chauffe','debouchage','robinetterie']},
+  cvc:{label:'CVC',subs:['chauffage','ventilation','climatisation']},
+  autre:{label:'Autre',subs:['autre']}
+};
+const subLabels={fuite:'Fuite d\'eau',chauffe:'Chauffe-eau',debouchage:'Débouchage',robinetterie:'Robinetterie',chauffage:'Chauffage',ventilation:'Ventilation',climatisation:'Climatisation',autre:'Autre'};
+
+const trees={
+  fuite:{
+    steps:[
+      {id:'s0',label:'Sécurité électrique',q:"La fuite est-elle proche d'un appareil électrique, d'une prise ou d'un tableau ?",opts:['Oui — risque électrique','Non, aucun risque électrique']},
+      {id:'s1',label:'Intensité',q:"La fuite est-elle importante (eau en continu) ou faible (goutte à goutte) ?",opts:['Importante — eau en continu','Faible — goutte à goutte'],showIf:{s0:'Non, aucun risque électrique'}},
+      {id:'s2',label:"Robinet d'arrêt",q:"Avez-vous pu couper l'eau ?",opts:["Oui, c'est coupé","Non, impossible","Je ne sais pas où c'est"],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte'}},
+      {id:'s3',label:'Localisation',q:'La fuite est-elle visible ou encastrée (mur, sol, plafond) ?',opts:['Visible','Encastrée — mur / sol / plafond'],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte'}},
+      {id:'s4',label:'Équipement',q:"La fuite se situe sur quel type d'élément ?",opts:['Robinet / siphon / flexible','Chauffe-eau / chaudière / groupe sécu','Tuyauterie murale / encastrée','Je ne sais pas'],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte',s3:'Visible'}},
+      {id:'s5',label:'Ancienneté',q:'Depuis quand avez-vous remarqué la fuite ?',opts:["Depuis aujourd'hui","Depuis quelques jours","Depuis longtemps"],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte'}},
+      {id:'s6',label:'Évolution',q:'La fuite a-t-elle empiré récemment ?',opts:["Oui, ça empire","Non, c'est stable"],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte'}},
+      {id:'s7',label:'Dégâts',q:'Y a-t-il des dégâts visibles (taches, cloquage, moisissures) ?',opts:['Oui, dégâts visibles','Non, pas de dégâts'],showIf:{s0:'Non, aucun risque électrique',s1:'Faible — goutte à goutte'}},
+    ],
+    diagnose(a){
+      if(a.s0==='Oui — risque électrique') return {cls:'rouge',badge:'Urgence sécurité',title:'Risque électrique + fuite',duree:'1h – 2h',prix:'150 – 300€',action:'URGENT',hint:null,
+        msg:"Ne pas toucher aux appareils électriques proches. Couper le disjoncteur si possible. Artisan en urgence immédiate.",
+        vigilance:"Une fuite à proximité d'une installation électrique peut entraîner un court-circuit ou rendre l'installation inutilisable. Il est préférable de couper le disjoncteur en attendant l'intervention."};
+      if(a.s1==='Importante — eau en continu') return {cls:'rouge',badge:'Urgence',title:'Urgence fuite active',duree:'1h – 1h30',prix:'150 – 250€',action:'URGENT',hint:null,
+        msg:"Couper l'eau générale si possible. Envoyer un artisan en urgence. Majoration urgence probable.",
+        vigilance:"Une fuite non maîtrisée peut rapidement endommager les revêtements de sol et les murs adjacents, et augmenter significativement le coût de remise en état. Plus l'intervention est rapide, plus les dégâts restent limités."};
+      if(a.s2==="Je ne sais pas où c'est") return {cls:'orange',badge:'Accompagnement',title:"Client ne sait pas couper l'eau",duree:'1h',prix:'90 – 150€',action:'AUTO',hint:"💡 Auto-résolution : guider le client par téléphone pour localiser le robinet général (souvent sous l'évier, dans la cave ou au compteur commun).",
+        msg:"Guider le client pour localiser le robinet d'arrêt général avant d'envoyer l'artisan.",
+        vigilance:"Sans pouvoir couper l'eau, la fuite continue à agir pendant l'attente de l'artisan. Localiser le robinet d'arrêt permet de limiter les dégâts sans attendre l'intervention."};
+      if(a.s4==='Chauffe-eau / chaudière / groupe sécu') return {cls:'orange',badge:'Équipement technique',title:'Fuite sur équipement technique',duree:'1h30 – 2h',prix:'150 – 250€',action:'VALIDATION',hint:null,
+        msg:"Fuite sur équipement sensible — risque de pièce à commander. Valider avec l'artisan avant annonce de prix.",
+        vigilance:"Une fuite sur un équipement sous pression (groupe de sécurité, chauffe-eau) peut indiquer une soupape défaillante ou un joint usé. Il est préférable de vérifier rapidement pour éviter une détérioration de l'appareil."};
+      if(a.s3==='Encastrée — mur / sol / plafond'){
+        if(a.s6==="Oui, ça empire"||a.s7==='Oui, dégâts visibles') return {cls:'noir',badge:'Risque aggravé',title:'Recherche de fuite + dégâts',duree:'Variable',prix:'250 – 500€+',action:'VALIDATION',hint:null,
+          msg:"Fuite encastrée avec aggravation ou dégâts. Intervention avec risque de travaux complémentaires. Validation artisan impérative avant annonce de prix.",
+          vigilance:"Une fuite encastrée en aggravation peut affecter la structure (moisissures, décollement d'enduit, plancher gonflé). Plus elle dure, plus les travaux de remise en état peuvent être importants."};
+        return {cls:'orange',badge:'Fuite encastrée',title:'Recherche de fuite',duree:'2h+',prix:'150 – 300€',action:'VALIDATION',hint:null,
+          msg:"Fuite non visible — recherche nécessaire avant intervention. Valider le devis avec l'artisan avant de rappeler le client.",
+          vigilance:"Une fuite encastrée non détectée peut progresser silencieusement dans les parois. Une intervention de recherche permet d'identifier l'origine précise avant que des dégâts structurels n'apparaissent."};
+      }
+      if(a.s5==='Depuis longtemps'&&a.s6==="Non, c'est stable") return {cls:'jaune',badge:'Fuite ancienne',title:'Réparation + contrôle installation',duree:'1h30',prix:'130 – 180€',action:'VALIDATION',hint:null,
+        msg:"Fuite ancienne stable — souvent usure de joints. Pas urgent mais pas trivial. Prévoir un contrôle plus large sur place.",
+        vigilance:"Une fuite ancienne, même stable, peut avoir causé une usure progressive des joints voisins. Il est utile de prévoir un contrôle de l'ensemble du raccordement pour éviter une récidive rapide."};
+      if(a.s6==="Oui, ça empire"||a.s7==='Oui, dégâts visibles') return {cls:'orange',badge:'Risque aggravé',title:'Fuite visible + aggravation',duree:'1h30 – 2h',prix:'130 – 200€',action:'VALIDATION',hint:null,
+        msg:"Fuite simple mais en aggravation ou avec dégâts. Prévoir évaluation plus large sur place.",
+        vigilance:"Une fuite qui s'aggrave peut avoir une origine plus large que le point visible. Il est préférable d'évaluer l'ensemble de l'installation sur place pour éviter une deuxième intervention rapprochée."};
+      return {cls:'vert',badge:'Fuite simple',title:'Réparation fuite standard',duree:'45min – 1h',prix:'90 – 130€',action:'AUTO',hint:null,
+        msg:"Fuite faible, visible, stable. Intervention standard — créneau classique, estimation annoncable au client.",
+        vigilance:null};
+    }
+  },
+  chauffe:{
+    steps:[
+      {id:'s1',label:'Sécurité',q:"Y a-t-il une fuite d'eau ou une odeur anormale (gaz / brûlé) ?",opts:['Oui — fuite ou odeur','Non, rien de visible']},
+      {id:'s2',label:'Type',q:'Quel type de chauffe-eau ?',opts:['Gaz','Électrique','Thermodynamique','On ne sait pas'],showIf:{s1:'Non, rien de visible'}},
+      {id:'s3',label:'Âge',q:"Il a quel âge environ ?",opts:['Moins de 5 ans','5 à 10 ans','Plus de 10 ans'],showIf:{s1:'Non, rien de visible'}},
+      {id:'s4',label:'Alimentation',q:"Côté alimentation, tout est normal ?",opts:['Oui, tout est normal','Non — disjoncteur ou coupure'],showIf:{s1:'Non, rien de visible'}},
+      {id:'s5',label:'Symptôme',q:"Comment est l'eau ?",opts:['Complètement froide','Chaude au début puis refroidit','Tiède en permanence'],showIf:{s1:'Non, rien de visible'}},
+      {id:'s6',label:'Apparition',q:"Comment le problème est-il apparu ?",opts:["D'un coup","Progressivement"],showIf:{s1:'Non, rien de visible'}},
+    ],
+    diagnose(a){
+      if(a.s1==='Oui — fuite ou odeur') return {cls:'rouge',badge:'Urgence sécurité',title:'Fuite ou odeur anormale',duree:'1h – 2h',prix:'150 – 300€',action:'URGENT',hint:null,
+        msg:"Si odeur de gaz : aérer, ne pas allumer de lumière, appeler le 0800 004 195 (GRDF). Artisan en urgence immédiate.",
+        vigilance:"Une odeur de gaz ou une odeur de brûlé sur un appareil à gaz peut indiquer une fuite ou un dysfonctionnement du brûleur. Il est préférable de ne pas utiliser l'appareil jusqu'à vérification."};
+      if(a.s4==='Non — disjoncteur ou coupure') return {cls:'vert',badge:'Vérification préalable',title:'Disjoncteur à vérifier',duree:'5min',prix:'0€',action:'AUTO',
+        hint:"💡 Auto-résolution : demander au client de vérifier son tableau électrique et de réarmer le disjoncteur. Dans 30% des cas ça suffit.",
+        msg:"Vérifier disjoncteur avant d'envoyer l'artisan — souvent une fausse panne résolue en 5 minutes.",
+        vigilance:null};
+      if(a.s3==='Plus de 10 ans') return {cls:'orange',badge:'Remplacement probable',title:'Appareil vétuste — devis remplacement',duree:'1h diagnostic + devis',prix:'400 – 1200€ remplacement',action:'VALIDATION',hint:null,
+        msg:"Appareil de plus de 10 ans en panne. Prévoir remplacement probable. Mentionner aides MaPrimeRénov' si propriétaire occupant.",
+        vigilance:"Un appareil de plus de 10 ans en panne présente souvent un coût de réparation qui se rapproche du prix d'un remplacement. Il peut être utile de prévoir les deux options avant l'intervention."};
+      if(a.s5==='Chaude au début puis refroidit') return {cls:'jaune',badge:'Résistance / thermostat',title:'Panne partielle — résistance probable',duree:'1h – 1h30',prix:'120 – 200€',action:'AUTO',hint:null,
+        msg:"Symptôme classique de résistance défaillante. Intervention standard, pièce à prévoir.",
+        vigilance:"Ce symptôme indique généralement une résistance en fin de vie. Une résistance défaillante non remplacée peut finir par tomber en panne complète."};
+      if(a.s6==="D'un coup") return {cls:'jaune',badge:'Panne franche',title:'Panne électrique ou thermostat',duree:'1h',prix:'100 – 180€',action:'AUTO',hint:null,
+        msg:"Panne soudaine — probablement thermostat ou résistance. Intervention standard.",
+        vigilance:null};
+      return {cls:'orange',badge:'Dégradation progressive',title:'Diagnostic approfondi nécessaire',duree:'1h – 2h',prix:'100 – 250€',action:'VALIDATION',hint:null,
+        msg:"Dégradation progressive — cause moins évidente. Laisser l'artisan diagnostiquer avant d'annoncer un prix.",
+        vigilance:"Une dégradation progressive peut indiquer plusieurs origines possibles (calcaire, résistance, thermostat). Un diagnostic sur place est nécessaire pour éviter une réparation incomplète."};
+    }
+  },
+  debouchage:{
+    steps:[
+      {id:'s1',label:'Équipement',q:'Le problème concerne quel équipement ?',opts:['Évier / lavabo','WC','Douche / baignoire','Plusieurs équipements','Canalisation principale']},
+      {id:'s2',label:'Gravité',q:"L'eau s'évacue-t-elle encore ou plus du tout ?",opts:['Plus du tout — totalement bloqué','Très lentement']},
+      {id:'s3',label:'Ancienneté',q:'Depuis quand ?',opts:["Depuis aujourd'hui","Depuis quelques jours","Depuis plus longtemps"]},
+      {id:'s4',label:'Évolution',q:"Le problème s'est-il aggravé récemment ?",opts:["Oui, ça empire","Non, c'est stable"]},
+      {id:'s5',label:'Tentatives',q:'Avez-vous déjà essayé quelque chose ?',opts:['Produit déboucheur (Destop…)','Ventouse','Furet','Rien du tout']},
+      {id:'s6',label:'Remontées',q:"Est-ce que l'eau remonte ou déborde quelque part ?",opts:['Oui — remontées ou débordement','Non']},
+    ],
+    diagnose(a){
+      if(a.s6==='Oui — remontées ou débordement') return {cls:'rouge',badge:'Urgence',title:'Bouchon avec remontées — risque débordement',duree:'1h30 – 3h',prix:'200 – 400€',action:'URGENT',hint:null,
+        msg:"Remontées d'eau = saturation du réseau. Arrêter d'utiliser les équipements. Artisan en urgence.",
+        vigilance:"Des remontées d'eau dans plusieurs équipements indiquent une saturation en aval de la colonne. Continuer à utiliser les équipements peut provoquer un débordement et des dégâts au sol ou aux murs."};
+      if(a.s1==='Plusieurs équipements'||a.s1==='Canalisation principale') return {cls:'orange',badge:'Canalisation / colonne',title:'Bouchon réseau ou colonne',duree:'2h+',prix:'200 – 350€',action:'VALIDATION',hint:null,
+        msg:"Plusieurs équipements impactés = problème en aval, sur la colonne commune. Peut nécessiter caméra d'inspection. Valider avec l'artisan.",
+        vigilance:"Un bouchon sur plusieurs équipements peut indiquer un problème plus large dans la canalisation principale, nécessitant un matériel adapté (furet motorisé, caméra). Une intervention standard risque de ne pas suffire."};
+      if(a.s5==='Produit déboucheur (Destop…)') return {cls:'jaune',badge:'Bouchon traité',title:'Débouchage approfondi — produit utilisé',duree:'1h30',prix:'150 – 220€',action:'VALIDATION',hint:null,
+        msg:"Attention : produit déboucheur déjà utilisé = bouchon plus compact, intervention plus technique. Prévenir l'artisan.",
+        vigilance:"L'utilisation d'un produit déboucheur peut agglutiner le bouchon et le rendre plus résistant aux méthodes mécaniques classiques. L'artisan doit en être informé pour adapter son intervention."};
+      if(a.s2==='Très lentement'&&a.s4==="Non, c'est stable") return {cls:'vert',badge:'Débit lent',title:'Débouchage préventif',duree:'30min – 45min',prix:'70 – 110€',action:'AUTO',
+        hint:"💡 Auto-résolution : suggérer au client d'utiliser une ventouse ou un produit déboucheur (5€) avant l'intervention. Si ça se résout, inutile d'envoyer l'artisan.",
+        msg:"Pas d'urgence. Suggérer ventouse ou produit déboucheur avant l'intervention.",
+        vigilance:null};
+      if(a.s2==='Plus du tout — totalement bloqué') return {cls:'jaune',badge:'Bouchon franc',title:'Débouchage standard',duree:'45min – 1h',prix:'100 – 140€',action:'AUTO',hint:null,
+        msg:"Bouchon localisé sur un équipement. Intervention standard. Créneau classique.",
+        vigilance:null};
+      return {cls:'jaune',badge:'Bouchon intermédiaire',title:'Débouchage approfondi',duree:'1h30 – 2h',prix:'150 – 220€',action:'VALIDATION',hint:null,
+        msg:"Plusieurs facteurs aggravants. Valider avec l'artisan selon la configuration.",
+        vigilance:"Un bouchon aggravé progressivement peut indiquer une accumulation plus profonde dans la canalisation. Il est préférable de valider avec l'artisan pour éviter une intervention insuffisante."};
+    }
+  },
+  robinetterie:{
+    steps:[
+      {id:'s1',label:'Type',q:"De quel équipement s'agit-il ?",opts:['Mitigeur / robinet',"Chasse d'eau / WC",'Douchette / flexible','Autre robinetterie']},
+      {id:'s2',label:'Problème',q:'Quel est le problème ?',opts:['Ça fuit / goutte','Ça ne fonctionne plus','Remplacement souhaité','Pression anormale']},
+      {id:'s3',label:'Urgence',q:'Est-ce urgent ?',opts:['Oui, gênant immédiatement','Non, peut attendre']},
+    ],
+    diagnose(a){
+      if(a.s2==='Ça fuit / goutte'&&a.s3==='Non, peut attendre') return {cls:'vert',badge:'Fuite légère',title:'Remplacement joint ou cartouche',duree:'30min – 1h',prix:'70 – 130€',action:'AUTO',
+        hint:"💡 Auto-résolution : un robinet qui goutte au bec peut nécessiter seulement un joint (2€ en quincaillerie). Proposer au client bricoleur avant d'envoyer l'artisan.",
+        msg:"Fuite légère non urgente. Souvent joint ou cartouche à changer. Hors fournitures.",
+        vigilance:null};
+      if(a.s2==='Remplacement souhaité') return {cls:'vert',badge:'Remplacement',title:'Remplacement robinetterie',duree:'45min – 1h30',prix:'100 – 200€',action:'AUTO',hint:null,
+        msg:"Demander marque, modèle et type de fixation si remplacement à l'identique. Hors fournitures.",
+        vigilance:null};
+      if(a.s1==="Chasse d'eau / WC") return {cls:'vert',badge:'Sanitaire',title:"Réparation chasse d'eau",duree:'30min – 1h',prix:'80 – 150€',action:'AUTO',
+        hint:"💡 Auto-résolution : si le flotteur est accessible, certains clients peuvent régler eux-mêmes le niveau d'eau.",
+        msg:"Mécanisme ou flotteur à changer dans la majorité des cas. Hors fournitures.",
+        vigilance:null};
+      if(a.s2==='Pression anormale') return {cls:'jaune',badge:'Pression',title:'Problème de pression à diagnostiquer',duree:'1h',prix:'100 – 180€',action:'VALIDATION',hint:null,
+        msg:"Pression anormale peut venir du réseau ou d'un réducteur défaillant. Valider avec l'artisan.",
+        vigilance:"Une pression anormalement haute peut accélérer l'usure des joints et des équipements. Un réducteur de pression défaillant est souvent à l'origine de ce type de symptôme."};
+      return {cls:'jaune',badge:'Robinetterie',title:'Intervention robinetterie',duree:'45min – 1h',prix:'90 – 160€',action:'AUTO',hint:null,
+        msg:"Intervention standard. Hors fournitures.",
+        vigilance:null};
+    }
+  },
+  chauffage:{
+    steps:[
+      {id:'s1',label:'Sécurité',q:"Y a-t-il une odeur anormale (gaz, brûlé) ou un bruit inhabituel ?",opts:["Oui — odeur ou bruit anormal","Non, rien d'anormal"]},
+      {id:'s2',label:'Étendue',q:'Le chauffage ne fonctionne plus du tout ou partiellement ?',opts:['Plus du tout','Partiellement — certains radiateurs ou temp. faible'],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s3',label:'Eau chaude',q:"Avez-vous encore de l'eau chaude sanitaire ?",opts:['Oui, eau chaude OK',"Non, plus d'eau chaude non plus"],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s4',label:'Type appareil',q:'Quel type de système avez-vous ?',opts:['Chaudière gaz','Chaudière électrique','Pompe à chaleur','Autre / je ne sais pas'],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s5',label:'Erreur / voyant',q:"Y a-t-il un message d'erreur ou un voyant allumé sur l'appareil ?",opts:['Oui — code ou voyant','Non, rien'],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s6',label:'Vérifications',q:'Avez-vous vérifié ces éléments ?',opts:['Pression du circuit','Disjoncteur','Thermostat','Rien vérifié'],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s7',label:'Apparition',q:'Le problème est apparu comment ?',opts:["D'un coup","Progressivement"],showIf:{s1:"Non, rien d'anormal"}},
+      {id:'s8',label:'Vulnérabilité',q:'Y a-t-il des personnes âgées ou vulnérables dans le logement ?',opts:['Oui','Non'],showIf:{s1:"Non, rien d'anormal"}},
+    ],
+    diagnose(a){
+      if(a.s1==="Oui — odeur ou bruit anormal") return {cls:'rouge',badge:'Urgence sécurité',title:'Mise en sécurité chaudière',duree:'1h',prix:'Élevé',action:'URGENT',hint:null,
+        msg:"Odeur de gaz → aérer, ne pas allumer, appeler 0800 004 195. Odeur brûlée → couper l'appareil. Artisan en urgence immédiate.",
+        vigilance:"Une odeur anormale sur une chaudière gaz peut indiquer une fuite ou un dysfonctionnement du brûleur. Il est préférable de ne pas utiliser l'appareil et d'aérer le local jusqu'à l'intervention."};
+      if(a.s8==='Oui') return {cls:'rouge',badge:'Urgence absolue',title:'Panne chauffage — personnes vulnérables',duree:'1h – 3h',prix:'150 – 400€',action:'URGENT',hint:null,
+        msg:"Personnes vulnérables sans chauffage. Intervention dans l'heure. Artisan prioritaire.",
+        vigilance:"L'absence de chauffage peut représenter un risque réel pour les personnes âgées ou fragiles, notamment en période hivernale. Une intervention rapide est préférable à une attente même courte."};
+      if(a.s6==='Thermostat') return {cls:'vert',badge:'Vérification préalable',title:'Thermostat à vérifier',duree:'5min',prix:'0€',action:'AUTO',
+        hint:"💡 Auto-résolution : vérifier que le thermostat est réglé au-dessus de la température ambiante et que les piles ne sont pas mortes. Résout le problème dans 20% des cas.",
+        msg:"Vérifier thermostat (réglage + piles) avant d'envoyer l'artisan.",
+        vigilance:null};
+      if(a.s6==='Disjoncteur') return {cls:'vert',badge:'Vérification préalable',title:'Disjoncteur à vérifier',duree:'5min',prix:'0€',action:'AUTO',
+        hint:"💡 Auto-résolution : demander au client de vérifier son tableau électrique et de réarmer le disjoncteur dédié à la chaudière.",
+        msg:"Vérifier disjoncteur avant d'envoyer l'artisan — souvent une fausse panne.",
+        vigilance:null};
+      if(a.s3==="Non, plus d'eau chaude non plus"&&a.s2==='Plus du tout') return {cls:'orange',badge:'Panne totale',title:'Panne totale chaudière',duree:'1h – 2h',prix:'120 – 250€',action:'VALIDATION',hint:null,
+        msg:"Panne totale — plus de chauffage ni d'eau chaude. Valider diagnostic avec l'artisan avant annonce de prix.",
+        vigilance:"Une panne complète peut être liée à un dysfonctionnement de l'appareil nécessitant un diagnostic approfondi. Le coût peut varier selon l'origine : composant électronique, pompe, échangeur."};
+      if(a.s2==='Partiellement — certains radiateurs ou temp. faible') return {cls:'jaune',badge:'Panne partielle',title:'Déséquilibre / purge / réglage',duree:'1h – 1h30',prix:'100 – 180€',action:'AUTO',hint:null,
+        msg:"Panne partielle — probablement rééquilibrage ou purge. Intervention standard.",
+        vigilance:"Un déséquilibre non corrigé peut s'aggraver avec le temps et affecter d'autres radiateurs. Un entretien préventif du circuit peut éviter une intervention plus lourde."};
+      if(a.s6==='Pression du circuit') return {cls:'jaune',badge:'Pression basse',title:'Réglage pression / purge circuit',duree:'1h',prix:'90 – 150€',action:'AUTO',
+        hint:"💡 Auto-résolution : guider le client pour vérifier le manomètre (entre 1 et 2 bars). Parfois suffit de regonfler le circuit via le robinet de remplissage.",
+        msg:"Pression basse — peut nécessiter juste un remplissage du circuit.",
+        vigilance:"Une pression trop basse empêche le circuit de chauffer correctement. Si elle chute régulièrement, cela peut indiquer une micro-fuite sur le circuit qu'il est utile de localiser."};
+      if(a.s5==='Oui — code ou voyant') return {cls:'noir',badge:'Panne équipement',title:'Diagnostic + réparation pièce',duree:'1h30 – 2h',prix:'150 – 300€',action:'VALIDATION',hint:null,
+        msg:"Code erreur affiché — pièce probablement à remplacer. Demander au client de noter le code erreur exact avant l'intervention.",
+        vigilance:"Un code erreur indique généralement un composant défaillant identifié par l'appareil. Noter le code permet à l'artisan d'anticiper la pièce à commander et d'éviter un second déplacement."};
+      if(a.s3==='Oui, eau chaude OK') return {cls:'jaune',badge:'Chauffage seul',title:'Diagnostic thermostat / commande',duree:'1h',prix:'100 – 150€',action:'VALIDATION',hint:null,
+        msg:"Eau chaude OK mais pas de chauffage — probablement thermostat ou commande. Valider avec l'artisan.",
+        vigilance:null};
+      return {cls:'orange',badge:'Panne chaudière',title:'Diagnostic chaudière',duree:'1h – 2h',prix:'100 – 250€',action:'VALIDATION',hint:null,
+        msg:"Valider diagnostic avec l'artisan avant annonce de prix.",
+        vigilance:null};
+    }
+  },
+  ventilation:{
+    steps:[
+      {id:'s1',label:'Type',q:"De quel type de ventilation s'agit-il ?",opts:['VMC simple flux','VMC double flux','Extracteur ponctuel','Je ne sais pas']},
+      {id:'s2',label:'Problème',q:'Quel est le problème ?',opts:['Plus de ventilation / bruit anormal','Odeurs persistantes','Condensation / humidité','Entretien / nettoyage']},
+      {id:'s3',label:'Ancienneté',q:'Le problème est apparu quand ?',opts:["Récemment","Depuis longtemps"]},
+    ],
+    diagnose(a){
+      if(a.s2==='Plus de ventilation / bruit anormal') return {cls:'jaune',badge:'Panne VMC',title:'Diagnostic VMC',duree:'1h – 1h30',prix:'100 – 200€',action:'VALIDATION',hint:null,
+        msg:"Panne ou bruit sur VMC — peut être moteur, filtre encrassé ou bouche obstruée. Valider avec l'artisan.",
+        vigilance:"Un dysfonctionnement du moteur ou un échauffement anormal peut indiquer une usure avancée. Il est préférable de vérifier rapidement pour éviter une détérioration ou un arrêt complet du système."};
+      if(a.s2==='Entretien / nettoyage') return {cls:'vert',badge:'Entretien',title:'Nettoyage VMC',duree:'1h',prix:'80 – 150€',action:'AUTO',
+        hint:"💡 Auto-résolution partielle : nettoyer les bouches d'extraction accessibles avec un chiffon humide. L'entretien complet reste à prévoir avec l'artisan.",
+        msg:"Entretien préventif. Créneau planifiable à convenance.",
+        vigilance:null};
+      if(a.s2==='Condensation / humidité') return {cls:'jaune',badge:'Humidité',title:'Diagnostic ventilation + humidité',duree:'1h30',prix:'120 – 220€',action:'VALIDATION',hint:null,
+        msg:"Condensation persistante peut indiquer une VMC défaillante ou sous-dimensionnée. Valider avec l'artisan.",
+        vigilance:"Une ventilation insuffisante favorise l'apparition de moisissures et peut dégrader progressivement les revêtements muraux. Un diagnostic précoce permet d'éviter des travaux de remise en état plus importants."};
+      return {cls:'jaune',badge:'Odeurs',title:'Diagnostic circuit ventilation',duree:'1h',prix:'100 – 180€',action:'VALIDATION',hint:null,
+        msg:"Odeurs persistantes malgré la ventilation — peut être un problème de circuit ou de filtre. Valider avec l'artisan.",
+        vigilance:"Des odeurs persistantes peuvent indiquer un circuit de ventilation obstrué ou une bouche mal positionnée. Une vérification permet d'identifier l'origine sans remplacer l'équipement inutilement."};
+    }
+  },
+  climatisation:{
+    steps:[
+      {id:'s1',label:'Type',q:'Quel type de climatisation ?',opts:['Split mural (unité int. + ext.)','Climatiseur mobile','Système centralisé','Je ne sais pas']},
+      {id:'s2',label:'Problème',q:'Quel est le problème ?',opts:["Ne refroidit plus / ne chauffe plus","Fuite d'eau ou de gaz",'Bruit anormal','Entretien / nettoyage']},
+      {id:'s3',label:'Âge',q:"L'appareil a quel âge ?",opts:['Moins de 5 ans','5 à 10 ans','Plus de 10 ans']},
+    ],
+    diagnose(a){
+      if(a.s2==="Fuite d'eau ou de gaz") return {cls:'rouge',badge:'Urgence',title:'Fuite climatisation',duree:'1h – 2h',prix:'150 – 300€',action:'URGENT',hint:null,
+        msg:"Fuite de gaz frigorigène = urgence réglementaire. Artisan qualifié avec certification fluides obligatoire.",
+        vigilance:"Une fuite de gaz frigorigène nécessite une intervention par un technicien certifié. L'utilisation de l'appareil doit être interrompue jusqu'à vérification."};
+      if(a.s2==='Entretien / nettoyage') return {cls:'vert',badge:'Entretien',title:'Entretien climatisation',duree:'1h – 1h30',prix:'100 – 180€',action:'AUTO',
+        hint:"💡 Auto-résolution partielle : nettoyer les filtres intérieurs (accessibles facilement). Améliore souvent les performances sans intervention.",
+        msg:"Entretien annuel recommandé. Artisan avec certification fluides frigorigènes obligatoire.",
+        vigilance:null};
+      if(a.s3==='Plus de 10 ans'&&a.s2==="Ne refroidit plus / ne chauffe plus") return {cls:'orange',badge:'Remplacement probable',title:'Appareil vétuste — devis remplacement',duree:'Visite + devis',prix:'1500 – 4000€ remplacement',action:'VALIDATION',hint:null,
+        msg:"Appareil vétuste en panne. Remplacement probable. Mentionner aides MaPrimeRénov' si propriétaire occupant.",
+        vigilance:"Sur un appareil de plus de 10 ans, le coût d'une réparation peut se rapprocher de celui d'un remplacement. Il peut être utile de prévoir les deux options avant l'intervention."};
+      if(a.s2==='Bruit anormal') return {cls:'jaune',badge:'Bruit',title:'Diagnostic unité extérieure / intérieure',duree:'1h',prix:'100 – 180€',action:'VALIDATION',hint:null,
+        msg:"Bruit peut indiquer un compresseur ou ventilateur défaillant. Valider avec l'artisan.",
+        vigilance:"Un bruit inhabituel sur l'unité extérieure peut indiquer un compresseur en début de défaillance. Une vérification précoce peut éviter un remplacement complet de l'unité."};
+      return {cls:'jaune',badge:'Panne climatisation',title:'Diagnostic climatisation',duree:'1h – 1h30',prix:'120 – 220€',action:'VALIDATION',hint:null,
+        msg:"Valider diagnostic avec l'artisan. Certification fluides frigorigènes obligatoire.",
+        vigilance:null};
+    }
+  },
+  autre:{
+    steps:[
+      {id:'s1',label:'Nature',q:"De quoi s'agit-il ?",opts:['Installation neuve','Entretien annuel chaudière','Dépannage non identifié','Devis travaux']},
+      {id:'s2',label:'Urgence',q:'Est-ce urgent ?',opts:['Oui, gênant immédiatement','Non, peut attendre quelques jours']},
+    ],
+    diagnose(a){
+      if(a.s1==='Entretien annuel chaudière') return {cls:'vert',badge:'Entretien',title:'Entretien annuel chaudière',duree:'1h – 1h30',prix:'100 – 180€',action:'AUTO',hint:null,
+        msg:"Entretien obligatoire. Créneau planifiable à convenance. Bon usage des trous de planning artisan.",
+        vigilance:null};
+      if(a.s1==='Installation neuve'||a.s1==='Devis travaux') return {cls:'orange',badge:'Installation / devis',title:'Visite technique préalable',duree:'Visite + devis',prix:'Sur devis',action:'VALIDATION',hint:null,
+        msg:"Visite obligatoire avant tout devis. Organiser un créneau de diagnostic. Ne pas annoncer de prix.",
+        vigilance:null};
+      if(a.s2==='Oui, gênant immédiatement') return {cls:'jaune',badge:'À qualifier',title:'Demande à préciser — urgent',duree:'À définir',prix:'À définir',action:'VALIDATION',hint:null,
+        msg:"Prendre note et rappeler après qualification. Collecter : nature exacte, ancienneté, type d'équipement.",
+        vigilance:null};
+      return {cls:'vert',badge:'À qualifier',title:'Demande à préciser — non urgent',duree:'À définir',prix:'À définir',action:'VALIDATION',hint:null,
+        msg:"Pas d'urgence. Prendre les coordonnées et qualifier par rappel avant de transmettre à l'artisan.",
+        vigilance:null};
+    }
+  }
+};
+
+const state={};
+const clientInfo={};
+let currentCat='plomberie';
+let currentSub='fuite';
+
+function buildContext(ans,visibleSteps){
+  return visibleSteps.filter(s=>ans[s.id]).map(s=>'• '+s.label+' : '+ans[s.id]).join('\n');
+}
+
+function buildMessage(sub,r,fields,ans,visibleSteps){
+  const lines=[];
+  lines.push('🔧 NOUVELLE MISSION — '+subLabels[sub].toUpperCase());
+  lines.push('');
+  if(fields.nom) lines.push('👤 Client : '+fields.nom);
+  if(fields.adresse) lines.push('📍 Adresse : '+fields.adresse);
+  if(fields.tel) lines.push('📞 Tel : '+fields.tel);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━');
+  lines.push('DIAGNOSTIC : '+r.title);
+  lines.push('Niveau : '+r.badge);
+  lines.push('⏱ Durée estimée : '+r.duree);
+  lines.push('💶 Fourchette : '+r.prix+' (hors fournitures)');
+  lines.push('⚡ Action : '+r.action);
+  lines.push('━━━━━━━━━━━━━━━━━━');
+  const ctx=buildContext(ans,visibleSteps);
+  if(ctx){lines.push('');lines.push('📋 CONTEXTE CLIENT');lines.push(ctx);}
+  lines.push('');
+  lines.push('ℹ️ '+r.msg);
+  if(fields.note) lines.push('\n📝 Note : '+fields.note);
+  return lines.join('\n');
+}
+
+function switchCat(cat){
+  currentCat=cat;
+  document.querySelectorAll('.nav1 button').forEach((b,i)=>{b.classList.toggle('active',['plomberie','cvc','autre'][i]===cat)});
+  currentSub=categories[cat].subs[0];
+  renderNav2(cat);
+  renderDomain(currentSub);
+}
+
+function renderNav2(cat){
+  const nav2=document.getElementById('nav2');
+  nav2.innerHTML='';
+  categories[cat].subs.forEach(sub=>{
+    const btn=document.createElement('button');
+    btn.textContent=subLabels[sub];
+    btn.classList.toggle('active',sub===currentSub);
+    btn.onclick=()=>{currentSub=sub;document.querySelectorAll('#nav2 button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDomain(sub)};
+    nav2.appendChild(btn);
+  });
+}
+
+function renderDomain(sub){
+  if(!state[sub])state[sub]={};
+  if(!clientInfo[sub])clientInfo[sub]={};
+  const wrap=document.getElementById('domainWrap');
+  wrap.innerHTML='';
+  const tree=trees[sub];
+  const ans=state[sub];
+  const visibleSteps=tree.steps.filter(s=>{
+    if(!s.showIf)return true;
+    return Object.entries(s.showIf).every(([k,v])=>ans[k]===v);
+  });
+  const answeredCount=visibleSteps.filter(s=>ans[s.id]).length;
+
+  const progress=document.createElement('div');
+  progress.className='progress';
+  visibleSteps.forEach((s,i)=>{
+    const dot=document.createElement('div');
+    dot.className='progress-dot'+(ans[s.id]?' done':(i===answeredCount?' current':''));
+    progress.appendChild(dot);
+  });
+  const lbl=document.createElement('span');lbl.className='progress-label';lbl.textContent=answeredCount+'/'+visibleSteps.length+' questions';
+  progress.appendChild(lbl);wrap.appendChild(progress);
+
+  let allAnswered=true;
+  visibleSteps.forEach(s=>{
+    const isAnswered=!!ans[s.id];
+    const div=document.createElement('div');div.className='step'+(isAnswered?' answered':'');
+    const header=document.createElement('div');header.className='step-header';
+    const labelEl=document.createElement('div');labelEl.className='step-label';labelEl.textContent=s.label;
+    header.appendChild(labelEl);
+    if(isAnswered){const tag=document.createElement('span');tag.className='step-answered-tag';tag.innerHTML='<span class="check-icon">'+CHECK_GREEN+'</span> Répondu';header.appendChild(tag);}
+    div.appendChild(header);
+    const q=document.createElement('div');q.className='step-q';q.textContent=s.q;div.appendChild(q);
+    const opts=document.createElement('div');opts.className='opts';
+    s.opts.forEach(o=>{
+      const btn=document.createElement('button');
+      const isSelected=ans[s.id]===o;
+      if(isSelected){btn.classList.add('selected');btn.innerHTML='<span class="btn-check">'+CHECK_WHITE+'</span>'+o;}
+      else{if(isAnswered)btn.classList.add('not-selected');btn.textContent=o;}
+      btn.onclick=()=>{state[sub][s.id]=o;const idx=visibleSteps.findIndex(x=>x.id===s.id);visibleSteps.slice(idx+1).forEach(x=>delete state[sub][x.id]);renderDomain(sub)};
+      opts.appendChild(btn);
+    });
+    div.appendChild(opts);wrap.appendChild(div);
+    if(!ans[s.id])allAnswered=false;
+  });
+
+  if(allAnswered&&visibleSteps.length>0){
+    const r=tree.diagnose(ans);
+    const actionColor=r.action==='URGENT'?'pill-urgent':r.action==='VALIDATION'?'pill-validation':'pill-auto';
+
+    const rdiv=document.createElement('div');rdiv.className='result '+r.cls;
+    let vigilanceHTML='';
+    if(r.vigilance){
+      vigilanceHTML=`<div class="vigilance"><div class="vigilance-label">⚠️ Point de vigilance</div>${r.vigilance}</div>`;
+    }
+    rdiv.innerHTML=`
+      <div class="result-top">
+        <span class="result-badge">${r.badge}</span>
+        <span class="result-title">${r.title}</span>
+      </div>
+      <div class="result-grid">
+        <div class="rmeta"><div class="rmeta-label">Durée estimée</div><div class="rmeta-val">${r.duree}</div></div>
+        <div class="rmeta"><div class="rmeta-label">Fourchette prix</div><div class="rmeta-val">${r.prix}</div></div>
+        <div class="rmeta"><div class="rmeta-label">Action</div><div class="rmeta-val"><span class="action-pill ${actionColor}">${r.action}</span></div></div>
+      </div>
+      <div class="result-msg">${r.msg}</div>
+      ${vigilanceHTML}
+    `;
+    wrap.appendChild(rdiv);
+
+    if(r.hint){const hintDiv=document.createElement('div');hintDiv.className='auto-hint';hintDiv.innerHTML=r.hint;wrap.appendChild(hintDiv);}
+
+    const bilan=document.createElement('div');bilan.className='bilan';
+    const bilanHeader=document.createElement('div');bilanHeader.className='bilan-header';
+    bilanHeader.innerHTML='<span class="bilan-title">Message artisan</span>';
+    const copyBtn=document.createElement('button');copyBtn.className='copy-btn';copyBtn.innerHTML=COPY_ICON+' Copier';
+    copyBtn.onclick=()=>{
+      const f=clientInfo[sub]||{};
+      navigator.clipboard.writeText(buildMessage(sub,r,f,ans,visibleSteps)).then(()=>{
+        copyBtn.innerHTML=CHECK_ICON+' Copié !';copyBtn.classList.add('copied');
+        setTimeout(()=>{copyBtn.innerHTML=COPY_ICON+' Copier';copyBtn.classList.remove('copied')},2000);
+      });
+    };
+    bilanHeader.appendChild(copyBtn);bilan.appendChild(bilanHeader);
+
+    const fields=document.createElement('div');fields.className='client-fields';
+    [{key:'nom',label:'Client',ph:'Prénom / nom'},{key:'tel',label:'Téléphone',ph:'06 xx xx xx xx'},{key:'adresse',label:'Adresse',ph:'Rue, arrondissement'},{key:'note',label:'Note',ph:'Précision libre…'}].forEach(f=>{
+      const w=document.createElement('div');w.className='field-wrap';w.innerHTML='<label>'+f.label+'</label>';
+      const inp=document.createElement('input');inp.type='text';inp.placeholder=f.ph;inp.value=clientInfo[sub][f.key]||'';
+      inp.oninput=()=>{clientInfo[sub][f.key]=inp.value;updatePreview()};
+      w.appendChild(inp);fields.appendChild(w);
+    });
+    bilan.appendChild(fields);
+
+    const preview=document.createElement('div');preview.className='bilan-body';bilan.appendChild(preview);
+    function updatePreview(){preview.textContent=buildMessage(sub,r,clientInfo[sub]||{},ans,visibleSteps);}
+    updatePreview();
+    wrap.appendChild(bilan);
+
+    const resetBtn=document.createElement('button');resetBtn.className='reset-btn';resetBtn.textContent='Nouveau diagnostic';
+    resetBtn.onclick=()=>{state[sub]={};clientInfo[sub]={};renderDomain(sub)};
+    wrap.appendChild(resetBtn);
+  }
+}
+
+Object.keys(trees).forEach(k=>{state[k]={};clientInfo[k]={}});
+switchCat('plomberie');
+</script>
+</body>
+</html>
